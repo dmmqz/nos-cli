@@ -1,44 +1,26 @@
 import os
 
 import cursor
-import requests
-from bs4 import BeautifulSoup
 from pynput import keyboard
 
 import constants
+from scraper import Scraper
 
 
 class Interface:
     """docstring for Interface."""
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """Initialize class."""
+        self.scraper = Scraper()
+
         self.selected_row = 0
         self.stop = False
+        self.mode = "select"
 
-        self.titles = self.get_items()
+        self.titles, self.links = self.scraper.get_items()
 
-    def get_items(self) -> list[str]:
-        """Get headlines from NOS.nl using webscraping."""
-        res = requests.get("https://nos.nl/sport/laatste")
-        # res = requests.get("https://nos.nl/nieuws/tech")
-        res.raise_for_status()
-
-        soup = BeautifulSoup(res.text, "html.parser")
-
-        articles = soup.select("section > ul > li")
-
-        titles = []
-        for article in articles:
-            title = article.find("h2").text
-            relative_date = article.find("time").text
-
-            full_title = f"{title} ({relative_date})"
-
-            titles.append(full_title)
-
-        return titles
-
-    def print_items(self, n: int = 10):
+    def print_items(self, n: int = 10) -> None:
         """Show headlines in the terminal."""
         os.system("clear")  # TODO: make windows compatible
 
@@ -48,32 +30,45 @@ class Interface:
             else:
                 print(title)
 
+    def print_article(self, url: str) -> None:
+        """Show article."""
+        os.system("clear")
+        article = self.scraper.get_article(url)
+
+        for text in article:
+            print(text + "\n")
+
     def handle_key(self, key: str) -> None:
         """Handle key inputs."""
         # TODO: stop getting all keys pressed once program has exited
+        # TODO: ignore inputs based on mode
         try:
             if key.char == "q":
                 print("Quitting...")
                 self.stop = True
-            if key.char == "j" and self.selected_row < len(self.titles) - 1:
+            if key.char == "j" and self.selected_row < 10 - 1:  # TODO: Make 10 based on len(titles)
                 self.selected_row += 1
             if key.char == "k" and self.selected_row > 0:
                 self.selected_row -= 1
-            if key.char == "b":  # TODO: return to previous page
-                pass
+            if key.char == "b":
+                self.mode = "select"
         except AttributeError:
             # Special keys
-            if key == keyboard.Key.enter:  # TODO: read article
-                pass
+            if key == keyboard.Key.enter:
+                self.mode = "article"
+                self.print_article(self.links[self.selected_row])
 
         self.update_screen()
 
     def update_screen(self) -> None:
-        """Update the screen."""
-        os.system("clear")
-        self.print_items()
+        """Update screen based on current mode."""
+        if self.mode == "select":
+            os.system("clear")
+            self.print_items()
+        elif self.mode == "article":
+            pass
 
-    def main(self):
+    def main(self) -> None:
         """Main loop function."""
         cursor.hide()
 
