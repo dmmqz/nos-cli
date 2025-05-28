@@ -1,0 +1,23 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    # pycodestyle (PEP8)
+    "E", 
+    "W",
+    # Pyflakes
+    "F",
+    # Docstrings (PEP257)
+    "D",
+    # isort
+    "I",
+    # pyupgrade
+    "UP",
+    # flake8-simplify
+    "SIM",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
