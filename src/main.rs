@@ -10,6 +10,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let article_selector = Selector::parse("section > ul > li").unwrap();
     let title_selector = Selector::parse("h2").unwrap();
     let link_selector = Selector::parse("a").unwrap();
+    let datetime_selector = Selector::parse("span > time").unwrap();
 
     for article in document.select(&article_selector) {
         if let Some(title_element) = article.select(&title_selector).next() {
@@ -24,6 +25,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // TODO: get datetime
+        if let Some(datetime_element) = article.select(&datetime_selector).next() {
+            let datetime = datetime_element.text().collect::<Vec<_>>().join(" ");
+            println!("{}", datetime)
+        }
     }
     Ok(())
 }
