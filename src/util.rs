@@ -4,6 +4,12 @@ pub fn element_to_text(element: scraper::ElementRef) -> String {
     return element.text().collect::<Vec<_>>().join("");
 }
 
-pub fn article_to_title(article: scrape::Article) -> String {
-    return format!("{} ({})", article.title, article.datetime);
+pub fn articles_to_titles(articles: Vec<scrape::Article>) -> Vec<String> {
+    let mut titles = Vec::new();
+
+    for article in articles {
+        titles.push(format!("{} ({})", article.title, article.datetime));
+    }
+
+    return titles;
 }
