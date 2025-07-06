@@ -38,6 +38,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             b'k' if selected_row > 1 => selected_row -= 1,
             // Go down
             b'j' if selected_row < term_height => selected_row += 1,
+            b'g' => selected_row = 1,
+            b'G' => selected_row = term_height,
             _a => continue,
         }
         print_titles(&mut stdout, titles, selected_row);
@@ -56,17 +58,17 @@ fn print_titles<W: Write>(stdout: &mut W, titles: &[String], selected_row: usize
         if i == selected_row {
             write!(
                 stdout,
-                "{}{}{}{}{}{}",
+                "\r\n{}{}{}{}{}",
                 color::Bg(color::White),
                 color::Fg(color::Black),
-                termion::cursor::Goto(1, i as u16),
+                // termion::cursor::Goto(1, i as u16),
                 title,
                 color::Fg(color::Reset),
                 color::Bg(color::Reset),
             )
             .unwrap();
         } else {
-            write!(stdout, "{}{}", termion::cursor::Goto(1, i as u16), title).unwrap();
+            write!(stdout, "\r\n{}", title).unwrap();
         }
     }
 }
