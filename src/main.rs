@@ -21,9 +21,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Titles
     let articles = scrape::get_items()?;
-    let titles = &util::articles_to_titles(articles)[..=term_height];
+    let titles = &util::articles_to_titles(articles)[..term_height];
 
-    let mut selected_row = 1;
+    let mut selected_row = 0;
 
     // Main TUI loop
     let mut bytes = stdin.bytes();
@@ -35,11 +35,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Quit
             b'q' => break,
             // Go up
-            b'k' if selected_row > 1 => selected_row -= 1,
+            b'k' if selected_row > 0 => selected_row -= 1,
             // Go down
-            b'j' if selected_row < term_height => selected_row += 1,
-            b'g' => selected_row = 1,
-            b'G' => selected_row = term_height,
+            b'j' if selected_row + 1 < term_height => selected_row += 1,
+            b'g' => selected_row = 0,
+            b'G' => selected_row = term_height - 1,
             _ => continue,
         }
         print_titles(&mut stdout, titles, selected_row);
@@ -54,11 +54,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn print_titles<W: Write>(stdout: &mut W, titles: &[String], selected_row: usize) {
+    let _ = write!(stdout, "{}", termion::clear::All);
     for (i, title) in titles.iter().enumerate() {
         if i == selected_row {
             write!(
                 stdout,
-                "\r\n{}{}{}{}{}",
+                "{}{}{}{}{}{}",
+                termion::cursor::Goto(1, i as u16 + 1),
                 color::Bg(color::White),
                 color::Fg(color::Black),
                 title,
@@ -67,7 +69,13 @@ fn print_titles<W: Write>(stdout: &mut W, titles: &[String], selected_row: usize
             )
             .unwrap();
         } else {
-            write!(stdout, "\r\n{}", title).unwrap();
+            write!(
+                stdout,
+                "{}{}",
+                termion::cursor::Goto(1, i as u16 + 1),
+                title
+            )
+            .unwrap();
         }
     }
 }
