@@ -21,9 +21,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Titles
     let articles = scrape::get_items()?;
-    let titles = &util::articles_to_titles(articles)[..term_height];
+    let max_items = std::cmp::min(term_height, articles.len());
+    let titles = &util::articles_to_titles(articles.clone())[..max_items];
 
     let mut selected_row = 0;
+    let mut mode = "select";
 
     // Main TUI loop
     let mut bytes = stdin.bytes();
@@ -37,12 +39,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Go up
             b'k' if selected_row > 0 => selected_row -= 1,
             // Go down
-            b'j' if selected_row + 1 < term_height => selected_row += 1,
+            b'j' if selected_row + 1 < max_items => selected_row += 1,
+            // Go to top
             b'g' => selected_row = 0,
-            b'G' => selected_row = term_height - 1,
+            // Go to bottom
+            b'G' => selected_row = max_items - 1,
+            // Enter article
+            b'i' if mode == "select" => {
+                mode = "article";
+                print_article(
+                    &mut stdout,
+                    articles[selected_row].clone().href,
+                    titles[selected_row].clone(),
+                );
+                selected_row = 0;
+            }
+            // Exit article
+            b'b' if mode == "article" => {
+                mode = "select";
+                selected_row = 0;
+            }
             _ => continue,
         }
-        print_titles(&mut stdout, titles, selected_row);
+        if mode == "select" {
+            print_titles(&mut stdout, titles, selected_row);
+        }
 
         stdout.flush().unwrap();
         write!(stdout, "{}", termion::clear::All)?;
@@ -80,4 +101,19 @@ fn print_titles<W: Write>(stdout: &mut W, titles: &[String], selected_row: usize
     }
 }
 
-fn print_article<W: Write>(stdout: &mut W, all_text: &[String], title: String) {}
+fn print_article<W: Write>(stdout: &mut W, url: String, title: String) {
+    let _ = write!(stdout, "{}", termion::clear::All);
+
+    let all_text = scrape::get_article(url).unwrap();
+    let _ = write!(
+        stdout,
+        "\r\n{}{}{}",
+        termion::style::Bold,
+        title,
+        termion::style::Reset
+    );
+
+    for text in all_text {
+        let _ = write!(stdout, "\r\n{}\r\n", text);
+    }
+}
