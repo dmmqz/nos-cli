@@ -10,7 +10,7 @@ pub struct Article {
 }
 
 pub fn get_items() -> Result<Vec<Article>, Box<dyn std::error::Error>> {
-    let url = "https://nos.nl/sport/laatste";
+    let url = "https://nos.nl/nieuws/tech";
 
     let body = reqwest::blocking::get(url)?.text()?;
     let document = Html::parse_document(&body);
