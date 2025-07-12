@@ -23,15 +23,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (_, term_height) = termion::terminal_size().unwrap();
     let term_height = term_height as usize;
 
-    let _ = write!(stdout, "{}", cursor::Hide);
-
-    // Titles
     let articles = scrape::get_items()?;
-    let max_items = std::cmp::min(term_height, articles.len());
+    let max_items = articles.len();
     let titles = &util::articles_to_titles(articles.clone())[..max_items];
 
     let mut selected_row = 0;
+    let mut row_offset = 0;
     let mut mode = Mode::Select;
+
+    let _ = write!(stdout, "{}", cursor::Hide);
 
     // Main TUI loop
     let mut bytes = stdin.bytes();
@@ -43,13 +43,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Quit
             b'q' => break,
             // Go up
-            b'k' if selected_row > 0 => selected_row -= 1,
+            b'k' if selected_row > 0 => {
+                selected_row -= 1;
+                if selected_row + 1 == row_offset {
+                    row_offset -= 1;
+                }
+            }
             // Go down
-            b'j' if selected_row + 1 < max_items => selected_row += 1,
+            b'j' if selected_row + 1 < max_items => {
+                selected_row += 1;
+                if selected_row - row_offset + 1 > term_height {
+                    row_offset += 1;
+                }
+            }
             // Go to top
-            b'g' => selected_row = 0,
+            b'g' => {
+                selected_row = 0;
+                row_offset = 0;
+            }
             // Go to bottom
-            b'G' => selected_row = max_items - 1,
+            b'G' => {
+                selected_row = max_items - 1;
+                row_offset = max_items - term_height;
+            }
             // Enter article
             b'i' if mode == Mode::Select => {
                 mode = Mode::Article;
@@ -65,13 +81,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 mode = Mode::Select;
                 selected_row = 0;
             }
+            // TODO: Search
+            // b'/' if mode == Mode::Select =>
             _ => continue,
         }
         if mode == Mode::Select {
-            print_titles(&mut stdout, titles, selected_row);
+            let start_idx = row_offset;
+            let end_idx = std::cmp::min(start_idx + term_height, max_items);
+            let subset_titles = &titles[start_idx..end_idx];
+            print_titles(&mut stdout, subset_titles, selected_row - row_offset);
         }
 
-        stdout.flush().unwrap();
+        stdout.flush()?;
         write!(stdout, "{}", termion::clear::All)?;
     }
 
