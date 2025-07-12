@@ -1,7 +1,10 @@
+mod input;
 mod scrape;
 mod util;
 
 extern crate termion;
+
+use input::Action;
 
 use std::io::{Read, Write, stdin, stdout};
 use termion::raw::IntoRawMode;
@@ -38,36 +41,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     print_titles(&mut stdout, titles, selected_row);
     loop {
         let b = bytes.next().unwrap().unwrap();
+        let action = input::handle_input(b);
 
-        match b {
+        match action {
             // Quit
-            b'q' => break,
+            Action::Quit => break,
             // Go up
-            b'k' if selected_row > 0 => {
+            Action::MoveUp if selected_row > 0 => {
                 selected_row -= 1;
                 if selected_row + 1 == row_offset {
                     row_offset -= 1;
                 }
             }
             // Go down
-            b'j' if selected_row + 1 < max_items => {
+            Action::MoveDown if selected_row + 1 < max_items => {
                 selected_row += 1;
                 if selected_row - row_offset + 1 > term_height {
                     row_offset += 1;
                 }
             }
             // Go to top
-            b'g' => {
+            Action::GotoTop => {
                 selected_row = 0;
                 row_offset = 0;
             }
             // Go to bottom
-            b'G' => {
+            Action::GotoBottom => {
                 selected_row = max_items - 1;
                 row_offset = max_items - term_height;
             }
             // Enter article
-            b'i' if mode == Mode::Select => {
+            Action::EnterArticle if mode == Mode::Select => {
                 mode = Mode::Article;
                 print_article(
                     &mut stdout,
@@ -77,12 +81,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 selected_row = 0;
             }
             // Exit article
-            b'b' if mode == Mode::Article => {
+            Action::GoBack if mode == Mode::Article => {
                 mode = Mode::Select;
                 selected_row = 0;
             }
             // TODO: Search
-            // b'/' if mode == Mode::Select =>
+            // Action::Search if mode == Mode::Select =>
             _ => continue,
         }
         if mode == Mode::Select {
