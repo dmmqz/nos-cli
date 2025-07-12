@@ -7,6 +7,12 @@ use std::io::{Read, Write, stdin, stdout};
 use termion::raw::IntoRawMode;
 use termion::{color, cursor};
 
+#[derive(PartialEq)]
+enum Mode {
+    Select,
+    Article,
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Init
     let stdout = stdout();
@@ -25,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let titles = &util::articles_to_titles(articles.clone())[..max_items];
 
     let mut selected_row = 0;
-    let mut mode = "select";
+    let mut mode = Mode::Select;
 
     // Main TUI loop
     let mut bytes = stdin.bytes();
@@ -45,8 +51,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Go to bottom
             b'G' => selected_row = max_items - 1,
             // Enter article
-            b'i' if mode == "select" => {
-                mode = "article";
+            b'i' if mode == Mode::Select => {
+                mode = Mode::Article;
                 print_article(
                     &mut stdout,
                     articles[selected_row].clone().href,
@@ -55,13 +61,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 selected_row = 0;
             }
             // Exit article
-            b'b' if mode == "article" => {
-                mode = "select";
+            b'b' if mode == Mode::Article => {
+                mode = Mode::Select;
                 selected_row = 0;
             }
             _ => continue,
         }
-        if mode == "select" {
+        if mode == Mode::Select {
             print_titles(&mut stdout, titles, selected_row);
         }
 
