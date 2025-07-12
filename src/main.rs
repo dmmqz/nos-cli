@@ -1,5 +1,6 @@
 mod input;
 mod scrape;
+mod state;
 mod util;
 
 extern crate termion;
@@ -44,33 +45,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let action = input::handle_input(b);
 
         match action {
-            // Quit
             Action::Quit => break,
-            // Go up
+            // In the future:
+            // Action::MoveUp => app_state.move_up();
             Action::MoveUp if selected_row > 0 => {
                 selected_row -= 1;
                 if selected_row + 1 == row_offset {
                     row_offset -= 1;
                 }
             }
-            // Go down
             Action::MoveDown if selected_row + 1 < max_items => {
                 selected_row += 1;
                 if selected_row - row_offset + 1 > term_height {
                     row_offset += 1;
                 }
             }
-            // Go to top
             Action::GotoTop => {
                 selected_row = 0;
                 row_offset = 0;
             }
-            // Go to bottom
             Action::GotoBottom => {
                 selected_row = max_items - 1;
                 row_offset = max_items - term_height;
             }
-            // Enter article
             Action::EnterArticle if mode == Mode::Select => {
                 mode = Mode::Article;
                 print_article(
@@ -80,7 +77,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 selected_row = 0;
             }
-            // Exit article
             Action::GoBack if mode == Mode::Article => {
                 mode = Mode::Select;
                 selected_row = 0;
