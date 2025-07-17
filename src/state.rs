@@ -1,5 +1,7 @@
-use std::io::{Stdin, Stdout, Write, stdin, stdout};
-use termion::color;
+use crate::input::{self, Action};
+use crate::termion::raw::IntoRawMode;
+use std::io::{Read, StdinLock, StdoutLock, Write, stdin, stdout};
+use termion::{color, cursor, raw::RawTerminal};
 
 use crate::{
     scrape::{self, Article},
@@ -12,9 +14,9 @@ enum Mode {
     Article,
 }
 
-pub struct AppState {
-    stdout: Stdout,
-    stdin: Stdin,
+pub struct AppState<'a> {
+    stdout: RawTerminal<StdoutLock<'a>>,
+    stdin: StdinLock<'a>,
     term_height: usize,
     articles: Vec<Article>,
     max_items: usize,
@@ -24,12 +26,15 @@ pub struct AppState {
     mode: Mode,
 }
 
-impl AppState {
-    fn new() -> Self {
+impl<'a> AppState<'a> {
+    pub fn new() -> Self {
         let (_, term_height) = termion::terminal_size().unwrap();
 
         let stdout = stdout();
+        let stdout = stdout.lock().into_raw_mode().unwrap();
         let stdin = stdin();
+        let stdin = stdin.lock();
+
         let term_height = term_height as usize;
         let articles = scrape::get_items().unwrap();
         let max_items = articles.len();
@@ -56,7 +61,7 @@ impl AppState {
         }
     }
 
-    fn move_up(&mut self) {
+    pub fn move_up(&mut self) {
         if self.selected_row > 0 {
             self.selected_row -= 1;
             if self.selected_row + 1 == self.row_offset {
@@ -65,7 +70,7 @@ impl AppState {
         }
     }
 
-    fn move_down(&mut self) {
+    pub fn move_down(&mut self) {
         if self.selected_row + 1 < self.max_items {
             self.selected_row += 1;
             if self.selected_row - self.row_offset + 1 > self.term_height {
@@ -74,17 +79,17 @@ impl AppState {
         }
     }
 
-    fn go_top(&mut self) {
+    pub fn go_top(&mut self) {
         self.selected_row = 0;
         self.row_offset = 0;
     }
 
-    fn go_bottom(&mut self) {
+    pub fn go_bottom(&mut self) {
         self.selected_row = self.max_items - 1;
         self.row_offset = self.max_items - self.term_height;
     }
 
-    fn enter_article(&mut self) {
+    pub fn enter_article(&mut self) {
         self.mode = Mode::Article;
 
         let href = self.articles[self.selected_row].clone().href;
@@ -94,7 +99,77 @@ impl AppState {
         self.selected_row = 0;
     }
 
-    fn print_titles<W: Write>(stdout: &mut W, titles: &[String], selected_row: usize) {
+    pub fn main(mut self) {
+        let _ = write!(self.stdout, "{}", cursor::Hide);
+
+        // Main TUI loop
+        let mut bytes = self.stdin.bytes();
+        AppState::print_titles(&mut self.stdout, &self.titles, self.selected_row);
+        loop {
+            let b = bytes.next().unwrap().unwrap();
+            let action = input::handle_input(b);
+
+            match action {
+                Action::Quit => break,
+                // In the future:
+                // Action::MoveUp => app_state.move_up();
+                Action::MoveUp if self.selected_row > 0 => {
+                    self.selected_row -= 1;
+                    if self.selected_row + 1 == self.row_offset {
+                        self.row_offset -= 1;
+                    }
+                }
+                Action::MoveDown if self.selected_row + 1 < self.max_items => {
+                    self.selected_row += 1;
+                    if self.selected_row - self.row_offset + 1 > self.term_height {
+                        self.row_offset += 1;
+                    }
+                }
+                Action::GotoTop => {
+                    self.selected_row = 0;
+                    self.row_offset = 0;
+                }
+                Action::GotoBottom => {
+                    self.selected_row = self.max_items - 1;
+                    self.row_offset = self.max_items - self.term_height;
+                }
+                Action::EnterArticle if self.mode == Mode::Select => {
+                    self.mode = Mode::Article;
+                    AppState::print_article(
+                        &mut self.stdout,
+                        self.articles[self.selected_row].clone().href,
+                        self.titles[self.selected_row].clone(),
+                    );
+                    self.selected_row = 0;
+                }
+                Action::GoBack if self.mode == Mode::Article => {
+                    self.mode = Mode::Select;
+                    self.selected_row = 0;
+                }
+                // TODO: Search
+                // Action::Search if mode == Mode::Select =>
+                _ => continue,
+            }
+            if self.mode == Mode::Select {
+                let start_idx = self.row_offset;
+                let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
+                let subset_titles = &self.titles[start_idx..end_idx];
+                AppState::print_titles(
+                    &mut self.stdout,
+                    subset_titles,
+                    self.selected_row - self.row_offset,
+                );
+            }
+
+            self.stdout.flush().unwrap();
+            write!(self.stdout, "{}", termion::clear::All).unwrap();
+        }
+
+        // Cleanup
+        let _ = write!(self.stdout, "{}", cursor::Show);
+    }
+
+    fn print_titles(stdout: &mut RawTerminal<StdoutLock>, titles: &[String], selected_row: usize) {
         let _ = write!(stdout, "{}", termion::clear::All);
         for (i, title) in titles.iter().enumerate() {
             if i == selected_row {
@@ -121,7 +196,7 @@ impl AppState {
         }
     }
 
-    fn print_article<W: Write>(stdout: &mut W, url: String, title: String) {
+    fn print_article(stdout: &mut RawTerminal<StdoutLock>, url: String, title: String) {
         let _ = write!(stdout, "{}", termion::clear::All);
 
         let all_text = scrape::get_article(url).unwrap();
