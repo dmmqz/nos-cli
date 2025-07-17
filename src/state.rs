@@ -99,52 +99,38 @@ impl<'a> AppState<'a> {
         self.selected_row = 0;
     }
 
-    pub fn main(mut self) {
+    pub fn go_back(&mut self) {
+        self.mode = Mode::Select;
+        self.selected_row = 0;
+    }
+
+    pub fn main(&mut self) {
         let _ = write!(self.stdout, "{}", cursor::Hide);
 
-        // Main TUI loop
-        let mut bytes = self.stdin.bytes();
         AppState::print_titles(&mut self.stdout, &self.titles, self.selected_row);
         loop {
-            let b = bytes.next().unwrap().unwrap();
+            let b = self.stdin.by_ref().bytes().next().unwrap().unwrap();
             let action = input::handle_input(b);
 
             match action {
                 Action::Quit => break,
-                // In the future:
-                // Action::MoveUp => app_state.move_up();
                 Action::MoveUp if self.selected_row > 0 => {
-                    self.selected_row -= 1;
-                    if self.selected_row + 1 == self.row_offset {
-                        self.row_offset -= 1;
-                    }
+                    self.move_up();
                 }
                 Action::MoveDown if self.selected_row + 1 < self.max_items => {
-                    self.selected_row += 1;
-                    if self.selected_row - self.row_offset + 1 > self.term_height {
-                        self.row_offset += 1;
-                    }
+                    self.move_down();
                 }
                 Action::GotoTop => {
-                    self.selected_row = 0;
-                    self.row_offset = 0;
+                    self.go_top();
                 }
                 Action::GotoBottom => {
-                    self.selected_row = self.max_items - 1;
-                    self.row_offset = self.max_items - self.term_height;
+                    self.go_bottom();
                 }
                 Action::EnterArticle if self.mode == Mode::Select => {
-                    self.mode = Mode::Article;
-                    AppState::print_article(
-                        &mut self.stdout,
-                        self.articles[self.selected_row].clone().href,
-                        self.titles[self.selected_row].clone(),
-                    );
-                    self.selected_row = 0;
+                    self.enter_article();
                 }
                 Action::GoBack if self.mode == Mode::Article => {
-                    self.mode = Mode::Select;
-                    self.selected_row = 0;
+                    self.go_back();
                 }
                 // TODO: Search
                 // Action::Search if mode == Mode::Select =>
