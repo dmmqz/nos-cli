@@ -5,11 +5,10 @@ mod util;
 
 extern crate termion;
 
-use crate::state::AppState;
+use crate::state::App;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Init
-    let mut app = AppState::new();
+    let mut app = App::new();
     app.main();
     Ok(())
 }

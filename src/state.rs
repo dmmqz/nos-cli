@@ -14,7 +14,7 @@ enum Mode {
     Article,
 }
 
-pub struct AppState<'a> {
+pub struct App<'a> {
     stdout: RawTerminal<StdoutLock<'a>>,
     stdin: StdinLock<'a>,
     term_height: usize,
@@ -26,7 +26,8 @@ pub struct AppState<'a> {
     mode: Mode,
 }
 
-impl<'a> AppState<'a> {
+impl<'a> App<'a> {
+    // TODO: split this struct up, e.g. Render, AppState structs
     pub fn new() -> Self {
         let (_, term_height) = termion::terminal_size().unwrap();
 
@@ -48,7 +49,7 @@ impl<'a> AppState<'a> {
         let row_offset = 0;
         let mode = Mode::Select;
 
-        AppState {
+        App {
             stdout,
             stdin,
             term_height,
@@ -61,77 +62,73 @@ impl<'a> AppState<'a> {
         }
     }
 
-    pub fn move_up(&mut self) {
-        if self.selected_row > 0 {
-            self.selected_row -= 1;
-            if self.selected_row + 1 == self.row_offset {
-                self.row_offset -= 1;
-            }
+    fn move_up(&mut self) {
+        if self.selected_row == 0 {
+            return;
+        }
+        self.selected_row -= 1;
+        if self.selected_row + 1 == self.row_offset {
+            self.row_offset -= 1;
         }
     }
 
-    pub fn move_down(&mut self) {
-        if self.selected_row + 1 < self.max_items {
-            self.selected_row += 1;
-            if self.selected_row - self.row_offset + 1 > self.term_height {
-                self.row_offset += 1;
-            }
+    fn move_down(&mut self) {
+        if self.selected_row + 1 >= self.max_items {
+            return;
+        }
+        self.selected_row += 1;
+        if self.selected_row - self.row_offset + 1 > self.term_height {
+            self.row_offset += 1;
         }
     }
 
-    pub fn go_top(&mut self) {
+    fn go_top(&mut self) {
         self.selected_row = 0;
         self.row_offset = 0;
     }
 
-    pub fn go_bottom(&mut self) {
+    fn go_bottom(&mut self) {
         self.selected_row = self.max_items - 1;
         self.row_offset = self.max_items - self.term_height;
     }
 
-    pub fn enter_article(&mut self) {
+    fn enter_article(&mut self) {
+        if !(self.mode == Mode::Select) {
+            return;
+        }
         self.mode = Mode::Article;
 
         let href = self.articles[self.selected_row].clone().href;
         let titles = self.titles[self.selected_row].clone();
-        AppState::print_article(&mut self.stdout, href, titles);
+        App::print_article(&mut self.stdout, href, titles);
 
-        self.selected_row = 0;
+        self.go_top();
     }
 
-    pub fn go_back(&mut self) {
+    fn go_back(&mut self) {
+        if !(self.mode == Mode::Article) {
+            return;
+        }
         self.mode = Mode::Select;
-        self.selected_row = 0;
+        self.go_top();
     }
 
     pub fn main(&mut self) {
         let _ = write!(self.stdout, "{}", cursor::Hide);
 
-        AppState::print_titles(&mut self.stdout, &self.titles, self.selected_row);
+        App::print_titles(&mut self.stdout, &self.titles, self.selected_row);
         loop {
             let b = self.stdin.by_ref().bytes().next().unwrap().unwrap();
             let action = input::handle_input(b);
 
             match action {
                 Action::Quit => break,
-                Action::MoveUp if self.selected_row > 0 => {
-                    self.move_up();
-                }
-                Action::MoveDown if self.selected_row + 1 < self.max_items => {
-                    self.move_down();
-                }
-                Action::GotoTop => {
-                    self.go_top();
-                }
-                Action::GotoBottom => {
-                    self.go_bottom();
-                }
-                Action::EnterArticle if self.mode == Mode::Select => {
-                    self.enter_article();
-                }
-                Action::GoBack if self.mode == Mode::Article => {
-                    self.go_back();
-                }
+                Action::MoveUp => self.move_up(),
+                Action::MoveDown => self.move_down(),
+                Action::GotoTop => self.go_top(),
+                Action::GotoBottom => self.go_bottom(),
+                Action::EnterArticle => self.enter_article(),
+                Action::GoBack => self.go_back(),
                 // TODO: Search
                 // Action::Search if mode == Mode::Select =>
                 _ => continue,
@@ -140,11 +137,12 @@ impl<'a> AppState<'a> {
                 let start_idx = self.row_offset;
                 let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
                 let subset_titles = &self.titles[start_idx..end_idx];
-                AppState::print_titles(
+                App::print_titles(
                     &mut self.stdout,
                     subset_titles,
                     self.selected_row - self.row_offset,
                 );
+            } else if self.mode == Mode::Article {
             }
 
             self.stdout.flush().unwrap();
