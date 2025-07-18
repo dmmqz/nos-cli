@@ -18,6 +18,7 @@ pub struct App<'a> {
     stdout: RawTerminal<StdoutLock<'a>>,
     stdin: StdinLock<'a>,
     term_height: usize,
+    term_width: usize,
     articles: Vec<Article>,
     max_items: usize,
     titles: Vec<String>,
@@ -29,13 +30,14 @@ pub struct App<'a> {
 impl<'a> App<'a> {
     // TODO: split this struct up, e.g. Render, AppState structs
     pub fn new() -> Self {
-        let (_, term_height) = termion::terminal_size().unwrap();
+        let (term_width, term_height) = termion::terminal_size().unwrap();
 
         let stdout = stdout();
         let stdout = stdout.lock().into_raw_mode().unwrap();
         let stdin = stdin();
         let stdin = stdin.lock();
 
+        let term_width = term_width as usize;
         let term_height = term_height as usize;
         let articles = scrape::get_items().unwrap();
         let max_items = articles.len();
@@ -53,6 +55,7 @@ impl<'a> App<'a> {
             stdout,
             stdin,
             term_height,
+            term_width,
             articles,
             max_items,
             titles,
@@ -100,7 +103,7 @@ impl<'a> App<'a> {
 
         let href = self.articles[self.selected_row].clone().href;
         let titles = self.titles[self.selected_row].clone();
-        App::print_article(&mut self.stdout, href, titles);
+        App::print_article(&mut self.stdout, href, titles, self.term_width);
 
         self.go_top();
     }
@@ -180,7 +183,12 @@ impl<'a> App<'a> {
         }
     }
 
-    fn print_article(stdout: &mut RawTerminal<StdoutLock>, url: String, title: String) {
+    fn print_article(
+        stdout: &mut RawTerminal<StdoutLock>,
+        url: String,
+        title: String,
+        term_width: usize,
+    ) {
         let _ = write!(stdout, "{}", termion::clear::All);
 
         let all_text = scrape::get_article(url).unwrap();
@@ -192,8 +200,13 @@ impl<'a> App<'a> {
             termion::style::Reset
         );
 
+        // TODO: print subchapters as bold or italic
         for text in all_text {
-            let _ = write!(stdout, "\r\n{}\r\n", text);
+            let wrapped_text = textwrap::wrap(&text, term_width);
+            for line in wrapped_text {
+                write!(stdout, "\r\n{}", line).unwrap();
+            }
+            let _ = write!(stdout, "\r\n");
         }
     }
 }
