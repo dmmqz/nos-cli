@@ -25,6 +25,7 @@ pub struct App<'a> {
     selected_row: usize,
     row_offset: usize,
     mode: Mode,
+    current_article_text: Vec<String>,
 }
 
 impl<'a> App<'a> {
@@ -51,6 +52,8 @@ impl<'a> App<'a> {
         let row_offset = 0;
         let mode = Mode::Select;
 
+        let current_article_text = Vec::new();
+
         App {
             stdout,
             stdin,
@@ -62,32 +65,57 @@ impl<'a> App<'a> {
             selected_row,
             row_offset,
             mode,
+            current_article_text,
         }
     }
 
     fn move_up(&mut self) {
-        if self.selected_row == 0 {
-            return;
-        }
-        self.selected_row -= 1;
-        if self.selected_row + 1 == self.row_offset {
-            self.row_offset -= 1;
+        match self.mode {
+            Mode::Select => {
+                if self.selected_row == 0 {
+                    return;
+                }
+                self.selected_row -= 1;
+                if self.selected_row + 1 == self.row_offset {
+                    self.row_offset -= 1;
+                }
+            }
+            Mode::Article => {
+                if self.row_offset == 0 {
+                    return;
+                }
+                self.row_offset -= 1;
+            }
+            _ => (),
         }
     }
 
     fn move_down(&mut self) {
-        if self.selected_row + 1 >= self.max_items {
-            return;
-        }
-        self.selected_row += 1;
-        if self.selected_row - self.row_offset + 1 > self.term_height {
-            self.row_offset += 1;
+        match self.mode {
+            Mode::Select => {
+                if self.selected_row + 1 >= self.max_items {
+                    return;
+                }
+                self.selected_row += 1;
+                if self.selected_row - self.row_offset + 1 > self.term_height {
+                    self.row_offset += 1;
+                }
+            }
+            Mode::Article => {
+                if self.row_offset + self.term_height >= self.current_article_text.len() {
+                    return;
+                }
+                self.row_offset += 1;
+            }
+            _ => (),
         }
     }
 
     fn go_top(&mut self) {
-        self.selected_row = 0;
         self.row_offset = 0;
+        if self.mode == Mode::Select {
+            self.selected_row = 0;
+        }
     }
 
     fn go_bottom(&mut self) {
@@ -101,9 +129,23 @@ impl<'a> App<'a> {
         }
         self.mode = Mode::Article;
 
-        let href = self.articles[self.selected_row].clone().href;
-        let titles = self.titles[self.selected_row].clone();
-        App::print_article(&mut self.stdout, href, titles, self.term_width);
+        let url = self.articles[self.selected_row].clone().href;
+        let raw_article_text = scrape::get_article(url).unwrap();
+
+        let mut formatted_article_text: Vec<String> = Vec::new();
+        formatted_article_text.push(self.titles[self.selected_row].clone());
+
+        for text in raw_article_text {
+            let wrapped_text = textwrap::wrap(&text, self.term_width);
+            for line in wrapped_text {
+                formatted_article_text.push(format!("\r\n{}", line.to_string()));
+            }
+            formatted_article_text.push("\r\n".to_string())
+        }
+
+        self.current_article_text = formatted_article_text;
+
+        self.print_article();
 
         self.go_top();
     }
@@ -136,16 +178,20 @@ impl<'a> App<'a> {
                 // Action::Search if mode == Mode::Select =>
                 _ => continue,
             }
-            if self.mode == Mode::Select {
-                let start_idx = self.row_offset;
-                let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
-                let subset_titles = &self.titles[start_idx..end_idx];
-                App::print_titles(
-                    &mut self.stdout,
-                    subset_titles,
-                    self.selected_row - self.row_offset,
-                );
-            } else if self.mode == Mode::Article {
+            match self.mode {
+                Mode::Select => {
+                    let start_idx = self.row_offset;
+                    let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
+                    let subset_titles = &self.titles[start_idx..end_idx];
+                    App::print_titles(
+                        &mut self.stdout,
+                        subset_titles,
+                        self.selected_row - self.row_offset,
+                    );
+                }
+                Mode::Article => {
+                    self.print_article();
+                }
             }
 
             self.stdout.flush().unwrap();
@@ -183,30 +229,24 @@ impl<'a> App<'a> {
         }
     }
 
-    fn print_article(
-        stdout: &mut RawTerminal<StdoutLock>,
-        url: String,
-        title: String,
-        term_width: usize,
-    ) {
-        let _ = write!(stdout, "{}", termion::clear::All);
+    fn print_article(&mut self) {
+        write!(self.stdout, "{}", termion::clear::All).unwrap();
 
-        let all_text = scrape::get_article(url).unwrap();
-        let _ = write!(
-            stdout,
-            "\r\n{}{}{}",
-            termion::style::Bold,
-            title,
-            termion::style::Reset
+        let start_idx = self.row_offset;
+        let end_idx = std::cmp::min(
+            start_idx + self.term_height,
+            self.current_article_text.len(),
         );
+        let subset_article = &self.current_article_text[start_idx..end_idx - 1];
 
-        // TODO: print subchapters as bold or italic
-        for text in all_text {
-            let wrapped_text = textwrap::wrap(&text, term_width);
-            for line in wrapped_text {
-                write!(stdout, "\r\n{}", line).unwrap();
-            }
-            let _ = write!(stdout, "\r\n");
+        for (i, line) in subset_article.iter().enumerate() {
+            write!(
+                self.stdout,
+                "{}{}",
+                termion::cursor::Goto(1, (i + 1) as u16),
+                line
+            )
+            .unwrap();
         }
     }
 }
