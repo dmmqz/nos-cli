@@ -40,7 +40,7 @@ impl<'a> App<'a> {
 
         let term_width = term_width as usize;
         let term_height = term_height as usize;
-        let articles = scrape::get_items().unwrap();
+        let articles = scrape::get_items().expect("Couldn't get article titles.");
         let max_items = articles.len();
 
         let titles = util::articles_to_titles(articles.clone())
@@ -86,7 +86,6 @@ impl<'a> App<'a> {
                 }
                 self.row_offset -= 1;
             }
-            _ => (),
         }
     }
 
@@ -107,7 +106,6 @@ impl<'a> App<'a> {
                 }
                 self.row_offset += 1;
             }
-            _ => (),
         }
     }
 
@@ -130,7 +128,8 @@ impl<'a> App<'a> {
         self.mode = Mode::Article;
 
         let url = self.articles[self.selected_row].clone().href;
-        let raw_article_text = scrape::get_article(url).unwrap();
+        let raw_article_text =
+            scrape::get_article(url).expect("Request for getting the article failed.");
 
         let mut formatted_article_text: Vec<String> = Vec::new();
         formatted_article_text.push(self.titles[self.selected_row].clone());
@@ -145,9 +144,8 @@ impl<'a> App<'a> {
 
         self.current_article_text = formatted_article_text;
 
-        self.print_article();
-
         self.go_top();
+        self.print_article();
     }
 
     fn go_back(&mut self) {
@@ -159,11 +157,17 @@ impl<'a> App<'a> {
     }
 
     pub fn main(&mut self) {
-        let _ = write!(self.stdout, "{}", cursor::Hide);
+        write!(self.stdout, "{}", cursor::Hide).unwrap();
 
         App::print_titles(&mut self.stdout, &self.titles, self.selected_row);
         loop {
-            let b = self.stdin.by_ref().bytes().next().unwrap().unwrap();
+            let b = self
+                .stdin
+                .by_ref()
+                .bytes()
+                .next()
+                .unwrap()
+                .expect("Couldn't read input.");
             let action = input::handle_input(b);
 
             match action {
@@ -176,6 +180,7 @@ impl<'a> App<'a> {
                 Action::GoBack => self.go_back(),
                 // TODO: Search
                 // Action::Search if mode == Mode::Select =>
+                // TODO: command mode (help, statusbar, etc.)
                 _ => continue,
             }
             match self.mode {
@@ -198,12 +203,11 @@ impl<'a> App<'a> {
             write!(self.stdout, "{}", termion::clear::All).unwrap();
         }
 
-        // Cleanup
-        let _ = write!(self.stdout, "{}", cursor::Show);
+        write!(self.stdout, "{}", cursor::Show).unwrap();
     }
 
     fn print_titles(stdout: &mut RawTerminal<StdoutLock>, titles: &[String], selected_row: usize) {
-        let _ = write!(stdout, "{}", termion::clear::All);
+        write!(stdout, "{}", termion::clear::All).unwrap();
         for (i, title) in titles.iter().enumerate() {
             if i == selected_row {
                 write!(
