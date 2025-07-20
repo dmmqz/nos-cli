@@ -83,7 +83,7 @@ impl App {
                 Action::EnterArticle => self.enter_article(),
                 Action::GoBack => self.go_back(),
                 Action::Search => self.search(),
-                Action::Reset => (),
+                Action::Reset => self.reset(),
                 // TODO: command mode (help, statusbar, etc.)
                 _ => continue,
             }
@@ -239,6 +239,15 @@ impl App {
             self.renderer
                 .print_titles(&matches_titles, self.selected_row);
         }
+    }
+
+    fn reset(&mut self) {
+        self.max_items = self.articles.len();
+        self.titles = util::articles_to_titles(&self.articles)
+            .into_iter()
+            .take(self.max_items)
+            .collect::<Vec<String>>();
+        self.go_top();
     }
 
     fn get_subset(&self) -> &[String] {
