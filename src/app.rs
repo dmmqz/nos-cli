@@ -64,7 +64,10 @@ impl App {
     pub fn main(&mut self) {
         self.renderer.hide_cursor();
 
-        self.renderer.print_titles(&self.titles, self.selected_row);
+        let subset_titles = self.get_subset().to_owned();
+        self.renderer
+            .print_titles(&subset_titles, self.selected_row - self.row_offset);
+        self.renderer.flush();
         loop {
             let keystroke = self.renderer.get_keystroke();
             let action = input::handle_input(keystroke);
@@ -84,25 +87,20 @@ impl App {
             }
             match self.mode {
                 Mode::Select => {
-                    let start_idx = self.row_offset;
-                    let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
-                    let subset_titles = &self.titles[start_idx..end_idx];
+                    let subset_titles = self.get_subset().to_owned();
+                    let relative_selected_row = self.selected_row - self.row_offset;
                     self.renderer
-                        .print_titles(subset_titles, self.selected_row - self.row_offset);
+                        .print_titles(&subset_titles, relative_selected_row);
                 }
                 Mode::Article => {
-                    let start_idx = self.row_offset;
-                    let end_idx = std::cmp::min(
-                        start_idx + self.term_height,
-                        self.current_article_text.len(),
-                    );
-                    let subset_article = &self.current_article_text[start_idx..end_idx - 1];
-                    self.renderer.print_article(subset_article);
+                    let subset_article = self.get_subset().to_owned();
+                    self.renderer.print_article(&subset_article);
                 }
             }
 
-            self.renderer.clear();
+            self.renderer.flush();
         }
+        self.renderer.clear();
         self.renderer.show_cursor();
     }
 
@@ -183,13 +181,9 @@ impl App {
         self.current_article_text = formatted_article_text;
 
         self.go_top();
-        let start_idx = self.row_offset;
-        let end_idx = std::cmp::min(
-            start_idx + self.term_height,
-            self.current_article_text.len(),
-        );
-        let subset_article = &self.current_article_text[start_idx..end_idx - 1];
-        self.renderer.print_article(subset_article);
+
+        let subset_article = self.get_subset().to_owned();
+        self.renderer.print_article(&subset_article);
     }
 
     fn go_back(&mut self) {
@@ -198,5 +192,23 @@ impl App {
         }
         self.mode = Mode::Select;
         self.go_top();
+    }
+
+    fn get_subset(&self) -> &[String] {
+        let start_idx = self.row_offset;
+
+        match self.mode {
+            Mode::Select => {
+                let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
+                return &self.titles[start_idx..end_idx];
+            }
+            Mode::Article => {
+                let end_idx = std::cmp::min(
+                    start_idx + self.term_height,
+                    self.current_article_text.len(),
+                );
+                return &self.current_article_text[start_idx..end_idx - 1];
+            }
+        }
     }
 }

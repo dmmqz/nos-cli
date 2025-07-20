@@ -69,8 +69,11 @@ impl<'a> Renderer<'a> {
             .expect("Couldn't read input.")
     }
 
-    pub fn clear(&mut self) {
+    pub fn flush(&mut self) {
         self.stdout.flush().unwrap();
+    }
+
+    pub fn clear(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
     }
 
