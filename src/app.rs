@@ -1,13 +1,9 @@
 use crate::{
     input::{self, Action},
-    renderer::{self, Renderer},
+    renderer::Renderer,
     scrape::{self, Article},
     util,
 };
-
-use std::io::{Read, StdinLock, StdoutLock, Write, stdin, stdout};
-use termion::raw::IntoRawMode;
-use termion::{color, cursor, raw::RawTerminal};
 
 #[derive(PartialEq)]
 enum Mode {
@@ -15,10 +11,8 @@ enum Mode {
     Article,
 }
 
-pub struct App<'a> {
-    renderer: Renderer<'a>,
-    // stdout: RawTerminal<StdoutLock<'a>>,
-    // stdin: StdinLock<'a>,
+pub struct App {
+    renderer: Renderer<'static>,
     term_height: usize,
     term_width: usize,
     articles: Vec<Article>,
@@ -30,23 +24,19 @@ pub struct App<'a> {
     current_article_text: Vec<String>,
 }
 
-impl<'a> App<'a> {
+impl App {
     // TODO: split this struct up, e.g. Render, AppState structs
     pub fn new() -> Self {
         let (term_width, term_height) = termion::terminal_size().unwrap();
 
-        // let stdout = stdout();
-        // let stdout = stdout.lock().into_raw_mode().unwrap();
-        // let stdin = stdin();
-        // let stdin = stdin.lock();
-        let renderer = Renderer::<'a>::new();
+        let renderer = Renderer::new();
 
         let term_width = term_width as usize;
         let term_height = term_height as usize;
         let articles = scrape::get_items().expect("Couldn't get article titles.");
         let max_items = articles.len();
 
-        let titles = util::articles_to_titles(articles.clone())
+        let titles = util::articles_to_titles(&articles)
             .into_iter()
             .take(max_items)
             .collect::<Vec<String>>();
@@ -58,8 +48,6 @@ impl<'a> App<'a> {
         let current_article_text = Vec::new();
 
         App {
-            // stdout,
-            // stdin,
             renderer,
             term_height,
             term_width,
@@ -71,6 +59,51 @@ impl<'a> App<'a> {
             mode,
             current_article_text,
         }
+    }
+
+    pub fn main(&mut self) {
+        self.renderer.hide_cursor();
+
+        self.renderer.print_titles(&self.titles, self.selected_row);
+        loop {
+            let keystroke = self.renderer.get_keystroke();
+            let action = input::handle_input(keystroke);
+
+            match action {
+                Action::Quit => break,
+                Action::MoveUp => self.move_up(),
+                Action::MoveDown => self.move_down(),
+                Action::GotoTop => self.go_top(),
+                Action::GotoBottom => self.go_bottom(),
+                Action::EnterArticle => self.enter_article(),
+                Action::GoBack => self.go_back(),
+                // TODO: Search
+                // Action::Search if mode == Mode::Select =>
+                // TODO: command mode (help, statusbar, etc.)
+                _ => continue,
+            }
+            match self.mode {
+                Mode::Select => {
+                    let start_idx = self.row_offset;
+                    let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
+                    let subset_titles = &self.titles[start_idx..end_idx];
+                    self.renderer
+                        .print_titles(subset_titles, self.selected_row - self.row_offset);
+                }
+                Mode::Article => {
+                    let start_idx = self.row_offset;
+                    let end_idx = std::cmp::min(
+                        start_idx + self.term_height,
+                        self.current_article_text.len(),
+                    );
+                    let subset_article = &self.current_article_text[start_idx..end_idx - 1];
+                    self.renderer.print_article(subset_article);
+                }
+            }
+
+            self.renderer.clear();
+        }
+        self.renderer.show_cursor();
     }
 
     fn move_up(&mut self) {
@@ -121,6 +154,7 @@ impl<'a> App<'a> {
     }
 
     fn go_bottom(&mut self) {
+        // TODO: handle Mode::Article
         self.selected_row = self.max_items - 1;
         self.row_offset = self.max_items - self.term_height;
     }
@@ -131,7 +165,7 @@ impl<'a> App<'a> {
         }
         self.mode = Mode::Article;
 
-        let url = self.articles[self.selected_row].clone().href;
+        let url = self.articles[self.selected_row].href.as_str();
         let raw_article_text =
             scrape::get_article(url).expect("Request for getting the article failed.");
 
@@ -165,115 +199,4 @@ impl<'a> App<'a> {
         self.mode = Mode::Select;
         self.go_top();
     }
-
-    pub fn main(&mut self) {
-        // write!(self.stdout, "{}", cursor::Hide).unwrap();
-        self.renderer.hide_cursor();
-
-        // App::print_titles(&mut self.stdout, &self.titles, self.selected_row);
-        self.renderer.print_titles(&self.titles, self.selected_row);
-        loop {
-            // let b = self
-            //     .stdin
-            //     .by_ref()
-            //     .bytes()
-            //     .next()
-            //     .unwrap()
-            //     .expect("Couldn't read input.");
-            let keystroke = self.renderer.get_keystroke();
-            let action = input::handle_input(keystroke);
-
-            match action {
-                Action::Quit => break,
-                Action::MoveUp => self.move_up(),
-                Action::MoveDown => self.move_down(),
-                Action::GotoTop => self.go_top(),
-                Action::GotoBottom => self.go_bottom(),
-                Action::EnterArticle => self.enter_article(),
-                Action::GoBack => self.go_back(),
-                // TODO: Search
-                // Action::Search if mode == Mode::Select =>
-                // TODO: command mode (help, statusbar, etc.)
-                _ => continue,
-            }
-            match self.mode {
-                Mode::Select => {
-                    let start_idx = self.row_offset;
-                    let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
-                    let subset_titles = &self.titles[start_idx..end_idx];
-                    self.renderer
-                        .print_titles(subset_titles, self.selected_row - self.row_offset);
-                    // App::print_titles(
-                    //     &mut self.stdout,
-                    //     subset_titles,
-                    //     self.selected_row - self.row_offset,
-                    // );
-                }
-                Mode::Article => {
-                    let start_idx = self.row_offset;
-                    let end_idx = std::cmp::min(
-                        start_idx + self.term_height,
-                        self.current_article_text.len(),
-                    );
-                    let subset_article = &self.current_article_text[start_idx..end_idx - 1];
-                    self.renderer.print_article(subset_article);
-                }
-            }
-
-            // self.stdout.flush().unwrap();
-            // write!(self.stdout, "{}", termion::clear::All).unwrap();
-            self.renderer.clear();
-        }
-
-        self.renderer.show_cursor();
-    }
-
-    // fn print_titles(stdout: &mut RawTerminal<StdoutLock>, titles: &[String], selected_row: usize) {
-    //     write!(stdout, "{}", termion::clear::All).unwrap();
-    //     for (i, title) in titles.iter().enumerate() {
-    //         if i == selected_row {
-    //             write!(
-    //                 stdout,
-    //                 "{}{}{}{}{}{}",
-    //                 termion::cursor::Goto(1, i as u16 + 1),
-    //                 color::Bg(color::White),
-    //                 color::Fg(color::Black),
-    //                 title,
-    //                 color::Fg(color::Reset),
-    //                 color::Bg(color::Reset),
-    //             )
-    //             .unwrap();
-    //         } else {
-    //             write!(
-    //                 stdout,
-    //                 "{}{}",
-    //                 termion::cursor::Goto(1, i as u16 + 1),
-    //                 title
-    //             )
-    //             .unwrap();
-    //         }
-    //     }
-    // }
-
-    // fn print_article(&mut self) {
-    //     self.stdout.flush().unwrap();
-    //     write!(self.stdout, "{}", termion::clear::All).unwrap();
-
-    //     let start_idx = self.row_offset;
-    //     let end_idx = std::cmp::min(
-    //         start_idx + self.term_height,
-    //         self.current_article_text.len(),
-    //     );
-    //     let subset_article = &self.current_article_text[start_idx..end_idx - 1];
-
-    //     for (i, line) in subset_article.iter().enumerate() {
-    //         write!(
-    //             self.stdout,
-    //             "{}{}",
-    //             termion::cursor::Goto(1, (i + 1) as u16),
-    //             line
-    //         )
-    //         .unwrap();
-    //     }
-    // }
 }

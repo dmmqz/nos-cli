@@ -51,7 +51,7 @@ pub fn get_items() -> Result<Vec<Article>, Box<dyn std::error::Error>> {
     Ok(articles)
 }
 
-pub fn get_article(url: String) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+pub fn get_article(url: &str) -> Result<Vec<String>, Box<dyn std::error::Error>> {
     let body = reqwest::blocking::get(url)?.text()?;
     let document = Html::parse_document(&body);
 
@@ -73,7 +73,7 @@ mod tests {
 
     #[test]
     fn test_get_article() {
-        let url = "https://nos.nl/collectie/13995/artikel/2573968-thuisland-zwitserland-schakelt-ijsland-uit-op-ek-en-houdt-zicht-op-kwartfinales".to_string();
+        let url = "https://nos.nl/collectie/13995/artikel/2573968-thuisland-zwitserland-schakelt-ijsland-uit-op-ek-en-houdt-zicht-op-kwartfinales";
         let result = get_article(url);
 
         match result {

@@ -1,4 +1,3 @@
-use crate::input::{self, Action};
 use crate::termion::raw::IntoRawMode;
 use std::io::{Read, StdinLock, StdoutLock, Write, stdin, stdout};
 use termion::{color, cursor, raw::RawTerminal};
@@ -49,11 +48,6 @@ impl<'a> Renderer<'a> {
 
     pub fn print_article(&mut self, subset_article: &[String]) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-
-        // TODO: DO THIS IN app.rs
-        // let start_idx = row_offset;
-        // let end_idx = std::cmp::min(start_idx + term_height, current_article_text.len());
-        // let subset_article = current_article_text[start_idx..end_idx - 1];
 
         for (i, line) in subset_article.iter().enumerate() {
             write!(
