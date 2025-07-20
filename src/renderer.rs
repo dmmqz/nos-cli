@@ -1,6 +1,6 @@
 use crate::termion::raw::IntoRawMode;
 use std::io::{Read, StdinLock, StdoutLock, Write, stdin, stdout};
-use termion::{color, cursor, raw::RawTerminal};
+use termion::{color, cursor, event::Key, input::TermRead, raw::RawTerminal};
 
 pub struct Renderer<'a> {
     stdout: RawTerminal<StdoutLock<'a>>,
@@ -60,13 +60,8 @@ impl<'a> Renderer<'a> {
         }
     }
 
-    pub fn get_keystroke(&mut self) -> u8 {
-        self.stdin
-            .by_ref()
-            .bytes()
-            .next()
-            .unwrap()
-            .expect("Couldn't read input.")
+    pub fn get_keystroke(&mut self) -> Key {
+        self.stdin.by_ref().keys().next().unwrap().unwrap()
     }
 
     pub fn flush(&mut self) {

@@ -32,7 +32,7 @@ impl App {
         let renderer = Renderer::new();
 
         let term_width = term_width as usize;
-        let term_height = term_height as usize;
+        let term_height = term_height as usize - 1;
         let articles = scrape::get_items().expect("Couldn't get article titles.");
         let max_items = articles.len();
 
@@ -81,7 +81,7 @@ impl App {
                 Action::EnterArticle => self.enter_article(),
                 Action::GoBack => self.go_back(),
                 // TODO: Search
-                // Action::Search if mode == Mode::Select =>
+                Action::Search => self.search(),
                 // TODO: command mode (help, statusbar, etc.)
                 _ => continue,
             }
@@ -193,6 +193,8 @@ impl App {
         self.mode = Mode::Select;
         self.go_top();
     }
+
+    fn search(&mut self) {}
 
     fn get_subset(&self) -> &[String] {
         let start_idx = self.row_offset;

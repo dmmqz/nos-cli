@@ -1,3 +1,5 @@
+use termion::event::Key;
+
 // Handle key inputs
 pub enum Action {
     Quit,
@@ -7,19 +9,20 @@ pub enum Action {
     GotoTop,
     GotoBottom,
     EnterArticle,
-    // Search,
+    Search,
     None,
 }
 
-pub fn handle_input(key: u8) -> Action {
+pub fn handle_input(key: Key) -> Action {
     match key {
-        b'q' => Action::Quit,
-        b'k' => Action::MoveUp,
-        b'j' => Action::MoveDown,
-        b'g' => Action::GotoTop,
-        b'G' => Action::GotoBottom,
-        b'b' => Action::GoBack,
-        b'i' => Action::EnterArticle,
+        Key::Char('q') => Action::Quit,
+        Key::Char('k') | Key::Up => Action::MoveUp,
+        Key::Char('j') | Key::Down => Action::MoveDown,
+        Key::Char('g') => Action::GotoTop,
+        Key::Char('G') => Action::GotoBottom,
+        Key::Char('b') => Action::GoBack,
+        Key::Char('i') => Action::EnterArticle,
+        Key::Char('/') => Action::Search,
         _ => Action::None,
     }
 }
