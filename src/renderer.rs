@@ -44,6 +44,7 @@ impl<'a> Renderer<'a> {
                 .unwrap();
             }
         }
+        self.flush();
     }
 
     pub fn print_article(&mut self, subset_article: &[String]) {
@@ -58,14 +59,23 @@ impl<'a> Renderer<'a> {
             )
             .unwrap();
         }
+        self.flush();
+    }
+
+    pub fn write_string(&mut self, string: String, y_pos: usize) {
+        write!(
+            self.stdout,
+            "{}{}{}",
+            termion::cursor::Goto(1, y_pos as u16),
+            termion::clear::AfterCursor,
+            string
+        )
+        .unwrap();
+        self.flush();
     }
 
     pub fn get_keystroke(&mut self) -> Key {
         self.stdin.by_ref().keys().next().unwrap().unwrap()
-    }
-
-    pub fn flush(&mut self) {
-        self.stdout.flush().unwrap();
     }
 
     pub fn clear(&mut self) {
@@ -78,5 +88,9 @@ impl<'a> Renderer<'a> {
 
     pub fn show_cursor(&mut self) {
         write!(self.stdout, "{}", cursor::Show).unwrap();
+    }
+
+    fn flush(&mut self) {
+        self.stdout.flush().unwrap();
     }
 }

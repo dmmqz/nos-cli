@@ -1,3 +1,6 @@
+use regex::Regex;
+use termion::event::Key;
+
 use crate::{
     input::{self, Action},
     renderer::Renderer,
@@ -67,7 +70,6 @@ impl App {
         let subset_titles = self.get_subset().to_owned();
         self.renderer
             .print_titles(&subset_titles, self.selected_row - self.row_offset);
-        self.renderer.flush();
         loop {
             let keystroke = self.renderer.get_keystroke();
             let action = input::handle_input(keystroke);
@@ -80,8 +82,8 @@ impl App {
                 Action::GotoBottom => self.go_bottom(),
                 Action::EnterArticle => self.enter_article(),
                 Action::GoBack => self.go_back(),
-                // TODO: Search
                 Action::Search => self.search(),
+                Action::Reset => (),
                 // TODO: command mode (help, statusbar, etc.)
                 _ => continue,
             }
@@ -97,8 +99,6 @@ impl App {
                     self.renderer.print_article(&subset_article);
                 }
             }
-
-            self.renderer.flush();
         }
         self.renderer.clear();
         self.renderer.show_cursor();
@@ -194,7 +194,52 @@ impl App {
         self.go_top();
     }
 
-    fn search(&mut self) {}
+    fn search(&mut self) {
+        self.go_top();
+
+        let original_titles = self.titles.clone();
+
+        let mut search_string = String::new();
+        loop {
+            self.renderer
+                .write_string(format!("{}{}", '/', search_string), self.term_height + 1);
+
+            let keystroke = self.renderer.get_keystroke();
+
+            match keystroke {
+                Key::Esc => {
+                    self.titles = original_titles.clone();
+                    self.max_items = self.titles.len();
+                    break;
+                }
+                Key::Char('\n') => break,
+                Key::Char(c) => search_string.push(c),
+                Key::Backspace => {
+                    search_string.pop();
+                }
+                _ => (),
+            }
+
+            // TODO: improve this
+            self.titles = original_titles.clone();
+            self.max_items = self.titles.len();
+
+            let re = Regex::new(search_string.as_str()).unwrap_or(Regex::new("").unwrap());
+
+            let mut matches: Vec<String> = Vec::new();
+            for title in &self.titles {
+                if re.is_match(&title.to_lowercase()) {
+                    matches.push(title.clone());
+                }
+            }
+            self.titles = matches;
+            self.max_items = self.titles.len();
+
+            let matches_titles = self.get_subset().to_owned();
+            self.renderer
+                .print_titles(&matches_titles, self.selected_row);
+        }
+    }
 
     fn get_subset(&self) -> &[String] {
         let start_idx = self.row_offset;
