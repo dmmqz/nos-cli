@@ -57,7 +57,6 @@ impl App {
             term_width,
             articles,
             all_articles,
-            max_items,
             titles,
             selected_row,
             row_offset,
