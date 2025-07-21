@@ -20,7 +20,6 @@ pub struct App {
     term_width: usize,
     articles: Vec<Article>,
     all_articles: Vec<Article>,
-    max_items: usize,
     titles: Vec<String>,
     selected_row: usize,
     row_offset: usize,
@@ -130,7 +129,7 @@ impl App {
     fn move_down(&mut self) {
         match self.mode {
             Mode::Select => {
-                if self.selected_row + 1 >= self.max_items {
+                if self.selected_row + 1 >= self.articles.len() {
                     return;
                 }
                 self.selected_row += 1;
@@ -156,8 +155,8 @@ impl App {
 
     fn go_bottom(&mut self) {
         // TODO: handle Mode::Article
-        self.selected_row = self.max_items - 1;
-        self.row_offset = self.max_items - self.term_height;
+        self.selected_row = self.articles.len() - 1;
+        self.row_offset = self.articles.len() - self.term_height;
     }
 
     fn enter_article(&mut self) {
@@ -234,9 +233,8 @@ impl App {
             self.articles = matches;
             self.titles = util::articles_to_titles(&self.articles)
                 .into_iter()
-                .take(self.max_items)
+                .take(self.articles.len())
                 .collect::<Vec<String>>();
-            self.max_items = self.articles.len();
 
             let matches_titles = self.get_subset().to_owned();
             self.renderer
@@ -246,10 +244,9 @@ impl App {
 
     fn reset(&mut self) {
         self.articles = self.all_articles.clone();
-        self.max_items = self.articles.len();
         self.titles = util::articles_to_titles(&self.articles)
             .into_iter()
-            .take(self.max_items)
+            .take(self.articles.len())
             .collect::<Vec<String>>();
         self.go_top();
     }
@@ -259,7 +256,7 @@ impl App {
 
         match self.mode {
             Mode::Select => {
-                let end_idx = std::cmp::min(start_idx + self.term_height, self.max_items);
+                let end_idx = std::cmp::min(start_idx + self.term_height, self.articles.len());
                 return &self.titles[start_idx..end_idx];
             }
             Mode::Article => {
