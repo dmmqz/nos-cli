@@ -19,8 +19,8 @@ impl<'a> Renderer<'a> {
             stdin: stdin,
         }
     }
-    pub fn print_titles(&mut self, titles: &[String], selected_row: usize) {
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
+    pub fn print_titles(&mut self, titles: &[String], selected_row: usize, term_height: usize) {
+        self.clear_main(term_height);
         for (i, title) in titles.iter().enumerate() {
             if i == selected_row {
                 write!(
@@ -78,8 +78,30 @@ impl<'a> Renderer<'a> {
         self.stdin.by_ref().keys().next().unwrap().unwrap()
     }
 
-    pub fn clear(&mut self) {
+    pub fn clear_all(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
+    }
+
+    pub fn clear_status_bar(&mut self, y_pos: usize) {
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(1, y_pos as u16 + 1),
+            termion::clear::CurrentLine
+        )
+        .unwrap();
+    }
+
+    fn clear_main(&mut self, y_pos: usize) {
+        for i in 0..=y_pos {
+            write!(
+                self.stdout,
+                "{}{}",
+                termion::cursor::Goto(1, i as u16),
+                termion::clear::CurrentLine
+            )
+            .unwrap();
+        }
     }
 
     pub fn hide_cursor(&mut self) {

@@ -69,8 +69,11 @@ impl App {
         self.renderer.hide_cursor();
 
         let subset_titles = self.get_subset().to_owned();
-        self.renderer
-            .print_titles(&subset_titles, self.selected_row - self.row_offset);
+        self.renderer.print_titles(
+            &subset_titles,
+            self.selected_row - self.row_offset,
+            self.term_height,
+        );
         loop {
             let keystroke = self.renderer.get_keystroke();
             let action = input::handle_input(keystroke);
@@ -92,8 +95,11 @@ impl App {
                 Mode::Select => {
                     let subset_titles = self.get_subset().to_owned();
                     let relative_selected_row = self.selected_row - self.row_offset;
-                    self.renderer
-                        .print_titles(&subset_titles, relative_selected_row);
+                    self.renderer.print_titles(
+                        &subset_titles,
+                        relative_selected_row,
+                        self.term_height,
+                    );
                 }
                 Mode::Article => {
                     let subset_article = self.get_subset().to_owned();
@@ -101,7 +107,7 @@ impl App {
                 }
             }
         }
-        self.renderer.clear();
+        self.renderer.clear_all();
         self.renderer.show_cursor();
     }
 
@@ -197,7 +203,7 @@ impl App {
 
     fn search(&mut self) {
         // TODO: improve this
-        self.go_top();
+        self.reset();
 
         let mut search_string = String::new();
         loop {
@@ -209,6 +215,12 @@ impl App {
             match keystroke {
                 Key::Esc => {
                     self.reset();
+                    self.renderer.clear_status_bar(self.term_height);
+                    break;
+                }
+                Key::Backspace if search_string.is_empty() => {
+                    self.reset();
+                    self.renderer.clear_status_bar(self.term_height);
                     break;
                 }
                 Key::Char('\n') => break,
@@ -237,7 +249,7 @@ impl App {
 
             let matches_titles = self.get_subset().to_owned();
             self.renderer
-                .print_titles(&matches_titles, self.selected_row);
+                .print_titles(&matches_titles, self.selected_row, self.term_height);
         }
     }
 
