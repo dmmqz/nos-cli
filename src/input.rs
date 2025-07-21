@@ -22,7 +22,7 @@ pub fn handle_input(key: Key) -> Action {
         Key::Char('g') => Action::GotoTop,
         Key::Char('G') => Action::GotoBottom,
         Key::Char('b') => Action::GoBack,
-        Key::Char('i') => Action::EnterArticle,
+        Key::Char('\n') | Key::Char('i') => Action::EnterArticle,
         Key::Char('/') => Action::Search,
         Key::Char('r') => Action::Reset,
         _ => Action::None,

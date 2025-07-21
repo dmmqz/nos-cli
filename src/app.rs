@@ -19,6 +19,7 @@ pub struct App {
     term_height: usize,
     term_width: usize,
     articles: Vec<Article>,
+    all_articles: Vec<Article>,
     max_items: usize,
     titles: Vec<String>,
     selected_row: usize,
@@ -37,6 +38,7 @@ impl App {
         let term_width = term_width as usize;
         let term_height = term_height as usize - 1;
         let articles = scrape::get_items().expect("Couldn't get article titles.");
+        let all_articles = articles.clone();
         let max_items = articles.len();
 
         let titles = util::articles_to_titles(&articles)
@@ -55,6 +57,7 @@ impl App {
             term_height,
             term_width,
             articles,
+            all_articles,
             max_items,
             titles,
             selected_row,
@@ -195,9 +198,8 @@ impl App {
     }
 
     fn search(&mut self) {
+        // TODO: improve this
         self.go_top();
-
-        let original_titles = self.titles.clone();
 
         let mut search_string = String::new();
         loop {
@@ -208,8 +210,7 @@ impl App {
 
             match keystroke {
                 Key::Esc => {
-                    self.titles = original_titles.clone();
-                    self.max_items = self.titles.len();
+                    self.reset();
                     break;
                 }
                 Key::Char('\n') => break,
@@ -220,20 +221,22 @@ impl App {
                 _ => (),
             }
 
-            // TODO: improve this
-            self.titles = original_titles.clone();
-            self.max_items = self.titles.len();
+            self.reset();
 
             let re = Regex::new(search_string.as_str()).unwrap_or(Regex::new("").unwrap());
 
-            let mut matches: Vec<String> = Vec::new();
-            for title in &self.titles {
+            let mut matches: Vec<Article> = Vec::new();
+            for (i, title) in self.titles.iter().enumerate() {
                 if re.is_match(&title.to_lowercase()) {
-                    matches.push(title.clone());
+                    matches.push(self.all_articles[i].clone());
                 }
             }
-            self.titles = matches;
-            self.max_items = self.titles.len();
+            self.articles = matches;
+            self.titles = util::articles_to_titles(&self.articles)
+                .into_iter()
+                .take(self.max_items)
+                .collect::<Vec<String>>();
+            self.max_items = self.articles.len();
 
             let matches_titles = self.get_subset().to_owned();
             self.renderer
@@ -242,6 +245,7 @@ impl App {
     }
 
     fn reset(&mut self) {
+        self.articles = self.all_articles.clone();
         self.max_items = self.articles.len();
         self.titles = util::articles_to_titles(&self.articles)
             .into_iter()
