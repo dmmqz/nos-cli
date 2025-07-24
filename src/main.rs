@@ -11,9 +11,14 @@ use crate::app::App;
 use clap::Parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    args::Args::parse();
+    let mut url = None;
+    let cli = args::Args::parse();
 
-    let mut app = App::new();
+    if !cli.category.is_empty() {
+        url = Some(format!("https://nos.nl/nieuws/{}", cli.category))
+    }
+
+    let mut app = App::new(url);
     app.main();
     Ok(())
 }

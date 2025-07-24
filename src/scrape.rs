@@ -9,16 +9,24 @@ pub struct Article {
     pub datetime: String,
 }
 
-pub fn get_items() -> Result<Vec<Article>, Box<dyn std::error::Error>> {
-    let url = "https://nos.nl/nieuws/laatste";
-
+pub fn get_items(url: String) -> Result<Vec<Article>, Box<dyn std::error::Error>> {
     let body = reqwest::blocking::get(url)?.text()?;
     let document = Html::parse_document(&body);
 
-    let article_selector = Selector::parse("section > ul > li").unwrap();
-    let title_selector = Selector::parse("h2").unwrap();
-    let link_selector = Selector::parse("a").unwrap();
-    let datetime_selector = Selector::parse("span > time").unwrap();
+    let potential_error_selector = Selector::parse("h1")?;
+    let potential_error_msg = document
+        .select(&potential_error_selector)
+        .next()
+        .map(util::element_to_text)
+        .unwrap_or_default();
+    if potential_error_msg == "De pagina kan helaas niet worden gevonden" {
+        panic!("The given category is not a valid option!")
+    }
+
+    let article_selector = Selector::parse("section > ul > li")?;
+    let title_selector = Selector::parse("h2")?;
+    let link_selector = Selector::parse("a")?;
+    let datetime_selector = Selector::parse("span > time")?;
 
     let mut articles = Vec::new();
 
@@ -55,7 +63,7 @@ pub fn get_article(url: &str) -> Result<Vec<String>, Box<dyn std::error::Error>>
     let body = reqwest::blocking::get(url)?.text()?;
     let document = Html::parse_document(&body);
 
-    let text_selector = Selector::parse("main > div > p, main > div > h2").unwrap();
+    let text_selector = Selector::parse("main > div > p, main > div > h2")?;
 
     let mut all_text = Vec::new();
 

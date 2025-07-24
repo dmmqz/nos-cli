@@ -29,14 +29,15 @@ pub struct App {
 
 impl App {
     // TODO: split this struct up, e.g. Render, AppState structs
-    pub fn new() -> Self {
+    pub fn new(url: Option<String>) -> Self {
         let (term_width, term_height) = termion::terminal_size().unwrap();
+        let link = url.unwrap_or(String::from("https://nos.nl/nieuws/laatste"));
 
         let renderer = Renderer::new();
 
         let term_width = term_width as usize;
         let term_height = term_height as usize - 1;
-        let articles = scrape::get_items().expect("Couldn't get article titles.");
+        let articles = scrape::get_items(link).expect("Couldn't get article titles.");
         let all_articles = articles.clone();
         let max_items = articles.len();
 
