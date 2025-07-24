@@ -3,7 +3,12 @@ name = "nos-cli"
 version = "0.1.0"
 edition = "2024"
 
+[[bin]]
+name = "nos-cli"
+path = "src/main.rs"
+
 [dependencies]
+clap = { version = "4.5.41", features = ["derive"] }
 regex = "1.11.1"
 reqwest = { version = "0.12.22", features = ["blocking"] }
 scraper = "0.23.1"
