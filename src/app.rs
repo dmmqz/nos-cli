@@ -28,7 +28,6 @@ pub struct App {
 }
 
 impl App {
-    // TODO: split this struct up, e.g. Render, AppState structs
     pub fn new(url: Option<String>) -> Self {
         let (term_width, term_height) = termion::terminal_size().unwrap();
         let link = url.unwrap_or(String::from("https://nos.nl/nieuws/laatste"));
@@ -160,9 +159,15 @@ impl App {
     }
 
     fn go_bottom(&mut self) {
-        // TODO: handle Mode::Article
-        self.selected_row = self.articles.len() - 1;
-        self.row_offset = self.articles.len() - self.term_height;
+        match self.mode {
+            Mode::Select => {
+                self.selected_row = self.articles.len() - 1;
+                self.row_offset = self.articles.len().saturating_sub(self.term_height);
+            }
+            Mode::Article => {
+                self.row_offset = self.current_article_text.len() - self.term_height;
+            }
+        }
     }
 
     fn enter_article(&mut self) {
@@ -203,7 +208,10 @@ impl App {
     }
 
     fn search(&mut self) {
-        // TODO: improve this
+        // TODO: improve this function
+        if self.mode == Mode::Article {
+            return;
+        }
         self.reset();
 
         let mut search_string = String::new();
