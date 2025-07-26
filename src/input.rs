@@ -1,6 +1,5 @@
 use termion::event::Key;
 
-// Handle key inputs
 pub enum Action {
     Quit,
     GoBack,
