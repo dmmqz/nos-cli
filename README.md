@@ -4,7 +4,7 @@
 
 ## Installation
 ```bash
-cargo install --path .
+cargo install --git https://github.com/dmmqz/nos-cli
 ```
 
 ## Usage
@@ -16,7 +16,7 @@ Options:
   -h, --help                 Print help
   -V, --version              Print version
 ```
-List of valid categories: `laatste`, `binnenland`, `buitenland`, `regio`, `politiek`, `economie`, `koningshuis`, `cultuur-en-media`, `opmerkelijk`.
+List of valid categories: `laatste`, `binnenland`, `buitenland`, `regio`, `politiek`, `economie`, `koningshuis`, `tech`, `cultuur-en-media`, `opmerkelijk`.
 
 ## Keybinds
 The keybindings for `nos-cli` are inspired by [Vim keybindings](https://www.vim.org/).

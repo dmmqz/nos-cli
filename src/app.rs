@@ -165,7 +165,10 @@ impl App {
                 self.row_offset = self.articles.len().saturating_sub(self.term_height);
             }
             Mode::Article => {
-                self.row_offset = self.current_article_text.len() - self.term_height;
+                self.row_offset = self
+                    .current_article_text
+                    .len()
+                    .saturating_sub(self.term_height);
             }
         }
     }

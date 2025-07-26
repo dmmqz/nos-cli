@@ -3,7 +3,7 @@ use std::io::{Read, StdinLock, StdoutLock, Write, stdin, stdout};
 use termion::{color, cursor, event::Key, input::TermRead, raw::RawTerminal};
 
 pub struct Renderer<'a> {
-    stdout: RawTerminal<StdoutLock<'a>>,
+    stdout: RawTerminal<StdoutLock<'a>>, // TODO: look into AlternateScreen
     stdin: StdinLock<'a>,
 }
 
