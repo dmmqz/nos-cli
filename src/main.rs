@@ -3,6 +3,7 @@ mod args;
 mod input;
 mod renderer;
 mod scrape;
+mod state;
 mod util;
 
 extern crate termion;
