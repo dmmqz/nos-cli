@@ -39,7 +39,7 @@ impl App {
         let subset_titles = self.state.get_subset(self.term_height).to_owned();
         self.renderer.print_titles(
             &subset_titles,
-            self.state.selected_row - self.state.row_offset,
+            self.state.get_relative_row(),
             self.term_height,
         );
         loop {
@@ -63,7 +63,7 @@ impl App {
             match self.state.mode {
                 Mode::Select => {
                     let subset_titles = self.state.get_subset(self.term_height).to_owned();
-                    let relative_selected_row = self.state.selected_row - self.state.row_offset;
+                    let relative_selected_row = self.state.get_relative_row();
                     self.renderer.print_titles(
                         &subset_titles,
                         relative_selected_row,
@@ -127,7 +127,7 @@ impl App {
                 .filter_articles(self.term_height, search_string.as_str());
 
             self.renderer
-                .print_titles(&matches_titles, self.state.selected_row, self.term_height);
+                .print_titles(&matches_titles, 0, self.term_height);
         }
     }
 }

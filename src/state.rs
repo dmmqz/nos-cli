@@ -15,9 +15,9 @@ pub struct State {
     articles: Vec<Article>,
     all_articles: Vec<Article>,
     titles: Vec<String>,
-    pub selected_row: usize, // TODO: use setter/getter
-    pub row_offset: usize,
-    pub mode: Mode,
+    selected_row: usize,
+    row_offset: usize,
+    pub mode: Mode, // TODO: use setter/getter
     current_article_text: Vec<String>,
 }
 
@@ -184,5 +184,9 @@ impl State {
                 return &self.current_article_text[start_idx..end_idx - 1];
             }
         }
+    }
+
+    pub fn get_relative_row(&self) -> usize {
+        self.selected_row - self.row_offset
     }
 }
