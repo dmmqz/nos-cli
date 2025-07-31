@@ -47,8 +47,8 @@ impl<'a> Renderer<'a> {
         self.flush();
     }
 
-    pub fn print_article(&mut self, subset_article: &[String]) {
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
+    pub fn print_article(&mut self, subset_article: &[String], term_height: usize) {
+        self.clear_main(term_height);
 
         for (i, line) in subset_article.iter().enumerate() {
             write!(
@@ -69,6 +69,20 @@ impl<'a> Renderer<'a> {
             termion::cursor::Goto(1, y_pos as u16),
             termion::clear::AfterCursor,
             string
+        )
+        .unwrap();
+        self.flush();
+    }
+
+    pub fn write_error_string(&mut self, string: String, y_pos: usize) {
+        write!(
+            self.stdout,
+            "{}{}{}{}{}",
+            termion::cursor::Goto(1, y_pos as u16),
+            termion::clear::AfterCursor,
+            color::Fg(color::Red),
+            string,
+            color::Fg(color::Reset),
         )
         .unwrap();
         self.flush();

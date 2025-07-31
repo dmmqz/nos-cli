@@ -107,10 +107,7 @@ impl State {
         }
     }
 
-    pub fn enter_article(&mut self, term_width: usize) -> Result<(), &'static str> {
-        if !(self.mode == Mode::Select) {
-            return Err("Not in select mode!");
-        }
+    pub fn enter_article(&mut self, term_width: usize) {
         self.mode = Mode::Article;
 
         let url = self.articles[self.selected_row].href.as_str();
@@ -131,8 +128,6 @@ impl State {
         self.current_article_text = formatted_article_text;
 
         self.go_top();
-
-        Ok(())
     }
 
     pub fn go_back(&mut self) {
@@ -191,8 +186,11 @@ impl State {
         self.selected_row - self.row_offset
     }
 
-    pub fn random_article(&mut self, term_width: usize) -> Result<(), &'static str> {
+    pub fn random_article(&mut self, term_width: usize) {
+        if self.articles.len() == 0 {
+            self.reset();
+        }
         self.selected_row = rand::rng().random_range(0..self.articles.len());
-        self.enter_article(term_width)
+        self.enter_article(term_width);
     }
 }

@@ -10,6 +10,7 @@ pub enum Action {
     EnterArticle,
     Search,
     Reset,
+    CommandMode,
     None,
 }
 
@@ -24,6 +25,7 @@ pub fn handle_input(key: Key) -> Action {
         Key::Char('\n') | Key::Char('i') => Action::EnterArticle,
         Key::Char('/') => Action::Search,
         Key::Char('r') => Action::Reset,
+        Key::Char(':') => Action::CommandMode,
         _ => Action::None,
     }
 }
