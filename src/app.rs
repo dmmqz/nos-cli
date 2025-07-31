@@ -20,10 +20,12 @@ impl App {
         let link = url.unwrap_or(String::from("https://nos.nl/nieuws/laatste"));
         let articles = scrape::get_items(link).expect("Couldn't get article titles.");
 
-        let renderer = Renderer::new();
+        let mut renderer = Renderer::new();
         let state = State::new(articles);
         let term_width = term_width as usize;
         let term_height = term_height as usize - 1;
+
+        renderer.hide_cursor();
 
         App {
             renderer,
@@ -34,14 +36,14 @@ impl App {
     }
 
     pub fn main(&mut self) {
-        self.renderer.hide_cursor();
-
         let subset_titles = self.state.get_subset(self.term_height).to_owned();
-        self.renderer.print_titles(
-            &subset_titles,
-            self.state.get_relative_row(),
-            self.term_height,
-        );
+        if self.state.mode == Mode::Select {
+            self.renderer.print_titles(
+                &subset_titles,
+                self.state.get_relative_row(),
+                self.term_height,
+            );
+        }
         loop {
             let keystroke = self.renderer.get_keystroke();
             let action = input::handle_input(keystroke);
@@ -57,9 +59,9 @@ impl App {
                 Action::Search => self.search(),
                 Action::Reset => self.state.reset(),
                 // TODO: command mode (help, statusbar, etc.)
+                // TODO: center screen (vim zz)
                 _ => continue,
             }
-            // TODO: make this a method in State
             match self.state.mode {
                 Mode::Select => {
                     let subset_titles = self.state.get_subset(self.term_height).to_owned();
@@ -110,7 +112,6 @@ impl App {
                     break;
                 }
                 Key::Backspace if search_string.is_empty() => {
-                    self.state.reset();
                     self.renderer.clear_status_bar(self.term_height);
                     break;
                 }
@@ -129,5 +130,14 @@ impl App {
             self.renderer
                 .print_titles(&matches_titles, 0, self.term_height);
         }
+    }
+
+    pub fn random_article(&mut self) {
+        if self.state.random_article(self.term_width).is_err() {
+            return;
+        }
+
+        let subset_article = self.state.get_subset(self.term_height).to_owned();
+        self.renderer.print_article(&subset_article);
     }
 }

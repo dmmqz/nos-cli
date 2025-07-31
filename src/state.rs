@@ -1,3 +1,4 @@
+use rand::Rng;
 use regex::Regex;
 
 use crate::{
@@ -188,5 +189,10 @@ impl State {
 
     pub fn get_relative_row(&self) -> usize {
         self.selected_row - self.row_offset
+    }
+
+    pub fn random_article(&mut self, term_width: usize) -> Result<(), &'static str> {
+        self.selected_row = rand::rng().random_range(0..self.articles.len());
+        self.enter_article(term_width)
     }
 }

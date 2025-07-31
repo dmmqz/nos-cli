@@ -20,6 +20,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let mut app = App::new(url);
+
+    if cli.random {
+        app.random_article();
+    }
+
     app.main();
+
     Ok(())
 }

@@ -12,7 +12,8 @@ cargo install --git https://github.com/dmmqz/nos-cli
 Usage: nos-cli [OPTIONS]
 
 Options:
-  -c, --category <CATEGORY>  News category to show articles for [default: laatste]
+  -c, --category <CATEGORY>  Category to show articles for [default: laatste]
+      --random               Open a random article
   -h, --help                 Print help
   -V, --version              Print version
 ```
