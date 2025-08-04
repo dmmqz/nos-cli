@@ -5,6 +5,7 @@ use termion::{color, cursor, event::Key, input::TermRead, raw::RawTerminal};
 pub struct Renderer<'a> {
     stdout: RawTerminal<StdoutLock<'a>>, // TODO: look into AlternateScreen
     stdin: StdinLock<'a>,
+    term_height: usize,
 }
 
 impl<'a> Renderer<'a> {
@@ -14,13 +15,18 @@ impl<'a> Renderer<'a> {
         let stdin = stdin();
         let stdin = stdin.lock();
 
+        let (_, term_height) = termion::terminal_size().unwrap();
+        let term_height = term_height as usize - 1;
+
         Renderer {
-            stdout: stdout,
-            stdin: stdin,
+            stdout,
+            stdin,
+            term_height,
         }
     }
-    pub fn print_titles(&mut self, titles: &[String], selected_row: usize, term_height: usize) {
-        self.clear_main(term_height);
+
+    pub fn print_titles(&mut self, titles: &[String], selected_row: usize) {
+        self.clear_main();
         for (i, title) in titles.iter().enumerate() {
             if i == selected_row {
                 write!(
@@ -47,8 +53,8 @@ impl<'a> Renderer<'a> {
         self.flush();
     }
 
-    pub fn print_article(&mut self, subset_article: &[String], term_height: usize) {
-        self.clear_main(term_height);
+    pub fn print_article(&mut self, subset_article: &[String]) {
+        self.clear_main();
 
         for (i, line) in subset_article.iter().enumerate() {
             write!(
@@ -62,11 +68,11 @@ impl<'a> Renderer<'a> {
         self.flush();
     }
 
-    pub fn write_string(&mut self, string: String, y_pos: usize) {
+    pub fn write_string(&mut self, string: String) {
         write!(
             self.stdout,
             "{}{}{}",
-            termion::cursor::Goto(1, y_pos as u16),
+            termion::cursor::Goto(1, self.term_height as u16 + 1),
             termion::clear::AfterCursor,
             string
         )
@@ -74,11 +80,11 @@ impl<'a> Renderer<'a> {
         self.flush();
     }
 
-    pub fn write_error_string(&mut self, string: String, y_pos: usize) {
+    pub fn write_error_string(&mut self, string: String) {
         write!(
             self.stdout,
             "{}{}{}{}{}",
-            termion::cursor::Goto(1, y_pos as u16),
+            termion::cursor::Goto(1, self.term_height as u16 + 1),
             termion::clear::AfterCursor,
             color::Fg(color::Red),
             string,
@@ -96,18 +102,18 @@ impl<'a> Renderer<'a> {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
     }
 
-    pub fn clear_status_bar(&mut self, y_pos: usize) {
+    pub fn clear_status_bar(&mut self) {
         write!(
             self.stdout,
             "{}{}",
-            termion::cursor::Goto(1, y_pos as u16 + 1),
+            termion::cursor::Goto(1, self.term_height as u16 + 1),
             termion::clear::CurrentLine
         )
         .unwrap();
     }
 
-    fn clear_main(&mut self, y_pos: usize) {
-        for i in 0..=y_pos {
+    fn clear_main(&mut self) {
+        for i in 0..=self.term_height {
             write!(
                 self.stdout,
                 "{}{}",

@@ -1,6 +1,6 @@
 # nos-cli
 [NOS News](https://nos.nl) on the command-line.
-![nos-cli demo](https://vhs.charm.sh/vhs-7k1RzV1FhaNml3KyXXgoWf.gif)
+![nos-cli demo](https://vhs.charm.sh/vhs-oqAsjzb3j6XOXGcdC4ioc.gif)
 
 ## Installation
 ```bash

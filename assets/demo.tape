@@ -1,9 +1,13 @@
+# Install vhs: https://github.com/charmbracelet/vhs
+# Run this file, creating a GIF: vhs demo.tape
+
 Output demo.gif
 
 Set Shell zsh
 Set TypingSpeed 75ms
 Set FontSize 22
-Set Width 1800
+Set FontFamily "FiraCode Nerd Font"
+Set Width 1300
 Set Height 650
 
 Type "nos-cli - NOS News on the command-line"

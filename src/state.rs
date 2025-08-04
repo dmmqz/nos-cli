@@ -20,6 +20,8 @@ pub struct State {
     row_offset: usize,
     pub mode: Mode, // TODO: use setter/getter
     current_article_text: Vec<String>,
+    term_height: usize,
+    term_width: usize,
 }
 
 impl State {
@@ -37,6 +39,10 @@ impl State {
 
         let current_article_text = Vec::new();
 
+        let (term_width, term_height) = termion::terminal_size().unwrap();
+        let term_height = term_height as usize - 1;
+        let term_width = term_width as usize;
+
         State {
             articles,
             all_articles,
@@ -45,6 +51,8 @@ impl State {
             row_offset,
             mode,
             current_article_text,
+            term_width,
+            term_height,
         }
     }
 
@@ -68,19 +76,19 @@ impl State {
         }
     }
 
-    pub fn move_down(&mut self, term_height: usize) {
+    pub fn move_down(&mut self) {
         match self.mode {
             Mode::Select => {
                 if self.selected_row + 1 >= self.articles.len() {
                     return;
                 }
                 self.selected_row += 1;
-                if self.selected_row - self.row_offset + 1 > term_height {
+                if self.selected_row - self.row_offset + 1 > self.term_height {
                     self.row_offset += 1;
                 }
             }
             Mode::Article => {
-                if self.row_offset + term_height >= self.current_article_text.len() {
+                if self.row_offset + self.term_height >= self.current_article_text.len() {
                     return;
                 }
                 self.row_offset += 1;
@@ -95,19 +103,22 @@ impl State {
         }
     }
 
-    pub fn go_bottom(&mut self, term_height: usize) {
+    pub fn go_bottom(&mut self) {
         match self.mode {
             Mode::Select => {
                 self.selected_row = self.articles.len() - 1;
-                self.row_offset = self.articles.len().saturating_sub(term_height);
+                self.row_offset = self.articles.len().saturating_sub(self.term_height);
             }
             Mode::Article => {
-                self.row_offset = self.current_article_text.len().saturating_sub(term_height);
+                self.row_offset = self
+                    .current_article_text
+                    .len()
+                    .saturating_sub(self.term_height);
             }
         }
     }
 
-    pub fn enter_article(&mut self, term_width: usize) {
+    pub fn enter_article(&mut self) {
         self.mode = Mode::Article;
 
         let url = self.articles[self.selected_row].href.as_str();
@@ -115,10 +126,15 @@ impl State {
             scrape::get_article(url).expect("Request for getting the article failed.");
 
         let mut formatted_article_text: Vec<String> = Vec::new();
-        formatted_article_text.push(self.titles[self.selected_row].clone());
+        for line in textwrap::wrap(
+            &self.articles[self.selected_row].title.clone(),
+            self.term_width,
+        ) {
+            formatted_article_text.push(line.to_string());
+        }
 
         for text in raw_article_text {
-            let wrapped_text = textwrap::wrap(&text, term_width);
+            let wrapped_text = textwrap::wrap(&text, self.term_width);
             for line in wrapped_text {
                 formatted_article_text.push(format!("\r\n{}", line.to_string()));
             }
@@ -147,7 +163,7 @@ impl State {
         self.go_top();
     }
 
-    pub fn filter_articles(&mut self, term_height: usize, search_string: &str) -> Vec<String> {
+    pub fn filter_articles(&mut self, search_string: &str) -> Vec<String> {
         self.reset();
         let re = Regex::new(search_string).unwrap_or(Regex::new("").unwrap());
 
@@ -163,20 +179,22 @@ impl State {
             .take(self.articles.len())
             .collect::<Vec<String>>();
 
-        self.get_subset(term_height).to_owned()
+        self.get_subset().to_owned()
     }
 
-    pub fn get_subset(&self, term_height: usize) -> &[String] {
+    pub fn get_subset(&self) -> &[String] {
         let start_idx = self.row_offset;
 
         match self.mode {
             Mode::Select => {
-                let end_idx = std::cmp::min(start_idx + term_height, self.articles.len());
+                let end_idx = std::cmp::min(start_idx + self.term_height, self.articles.len());
                 return &self.titles[start_idx..end_idx];
             }
             Mode::Article => {
-                let end_idx =
-                    std::cmp::min(start_idx + term_height, self.current_article_text.len());
+                let end_idx = std::cmp::min(
+                    start_idx + self.term_height,
+                    self.current_article_text.len(),
+                );
                 return &self.current_article_text[start_idx..end_idx - 1];
             }
         }
@@ -186,11 +204,11 @@ impl State {
         self.selected_row - self.row_offset
     }
 
-    pub fn random_article(&mut self, term_width: usize) {
+    pub fn random_article(&mut self) {
         if self.articles.len() == 0 {
             self.reset();
         }
         self.selected_row = rand::rng().random_range(0..self.articles.len());
-        self.enter_article(term_width);
+        self.enter_article();
     }
 }
