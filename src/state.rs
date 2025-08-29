@@ -20,7 +20,7 @@ pub struct State {
     row_offset: usize,
     pub mode: Mode, // TODO: use setter/getter
     current_article_text: Vec<String>,
-    term_height: usize,
+    term_height: usize, // TODO: maybe create trait to refresh this
     term_width: usize,
 }
 
@@ -92,6 +92,33 @@ impl State {
                     return;
                 }
                 self.row_offset += 1;
+            }
+        }
+    }
+
+    pub fn page_up(&mut self) {
+        self.selected_row = self.selected_row.saturating_sub(self.term_height);
+        self.row_offset = self.selected_row.saturating_sub(self.term_height - 1);
+    }
+
+    pub fn page_down(&mut self) {
+        match self.mode {
+            Mode::Select => {
+                self.selected_row += self.term_height;
+                if self.selected_row > self.articles.len() {
+                    self.selected_row = self.articles.len() - 1;
+                }
+                self.row_offset =
+                    std::cmp::min(self.selected_row, self.articles.len() - self.term_height);
+            }
+            Mode::Article => {
+                if self.row_offset + self.term_height >= self.current_article_text.len() {
+                    return;
+                }
+                self.row_offset += std::cmp::min(
+                    self.term_height,
+                    self.current_article_text.len() - self.term_height,
+                )
             }
         }
     }

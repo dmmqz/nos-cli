@@ -43,6 +43,8 @@ impl App {
                 Action::MoveDown => self.state.move_down(),
                 Action::GotoTop => self.state.go_top(),
                 Action::GotoBottom => self.state.go_bottom(),
+                Action::PageUp => self.state.page_up(),
+                Action::PageDown => self.state.page_down(),
                 Action::EnterArticle => self.enter_article(),
                 Action::GoBack => self.state.go_back(),
                 Action::Search => self.search(),

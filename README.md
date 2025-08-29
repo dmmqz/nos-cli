@@ -29,7 +29,10 @@ The keybindings for `nos-cli` are inspired by [Vim keybindings](https://www.vim.
 | `<j>`\|`<ArrowDown>` | Move down        |
 | `<g>`                | Go to the top    |
 | `<G>`                | Go to the bottom |
+| `<Ctrl+b>`           | Page up          |
+| `<Ctrl+f>`           | Page down        |
 | `<b>`                | Go back          |
 | `<Enter>`\|`<i>`     | Enter an article |
 | `</>`                | Search           |
 | `<r>`                | Reset search     |
+| `<:>`                | Command mode     |
